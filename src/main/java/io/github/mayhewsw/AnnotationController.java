@@ -97,6 +97,8 @@ public class AnnotationController {
      */
     public TreeMap<String, TextAnnotation> loadFolder(String folder, String username) throws Exception {
 
+        // we will modify this.!
+
         String folderurl = folders.get(folder);
         String foldertype = foldertypes.get(folder);
 
