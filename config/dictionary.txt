@@ -1,0 +1,1 @@
+Thai	/shared/experiments/mayhew2/lexicons/tha-urom-eng.masterlex.txt.gz

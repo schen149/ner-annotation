@@ -1,4 +1,5 @@
 package io.github.mayhewsw;
+import edu.illinois.cs.cogcomp.core.datastructures.IntPair;
 import edu.illinois.cs.cogcomp.core.datastructures.Pair;
 import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
@@ -7,7 +8,6 @@ import edu.illinois.cs.cogcomp.core.datastructures.textannotation.View;
 import edu.illinois.cs.cogcomp.core.io.LineIO;
 import edu.illinois.cs.cogcomp.core.utilities.SerializationHelper;
 import edu.illinois.cs.cogcomp.core.utilities.StringUtils;
-//import edu.illinois.cs.cogcomp.ner.data.UgDictionary;
 import edu.illinois.cs.cogcomp.nlp.corpusreaders.CoNLLNerReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.servlet.http.HttpSession;
-import javax.xml.soap.Text;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -36,6 +35,7 @@ public class AnnotationController {
     
     private HashMap<String, String> folders;
     private List<String> labels;
+    private Dictionary dict;
     private HashMap<String,String> foldertypes;
     private final String FOLDERTA = "ta";
     private final String FOLDERCONLL = "conll";
@@ -53,10 +53,10 @@ public class AnnotationController {
     public AnnotationController() throws IOException {
 
         logger.debug("Loading folders.txt");
-        List<String> lines = LineIO.read("config/folders.txt");
+        List<String> folderlines = LineIO.read("config/folders.txt");
         folders = new HashMap<String, String>();
         foldertypes = new HashMap<>();
-        for(String line: lines){
+        for(String line : folderlines){
             if(line.length() == 0 || line.startsWith("#")){
                 continue;
             }
@@ -82,6 +82,17 @@ public class AnnotationController {
         logger.debug("using labels: " + labels.toString());
 
         LineIO.write("src/main/resources/static/css/labels.css", csslines);
+
+        logger.debug("Loading dictionary.txt");
+        List<String> lines = LineIO.read("config/dictionary.txt");
+        // There should only be one line, and it should be the first line.
+        String[] sl = lines.get(0).trim().split("\\s+");
+
+        String lang = sl[0];
+        String dictpath = sl[1];
+
+        dict = new Dictionary(dictpath);
+
     }
 
     /**
@@ -96,8 +107,6 @@ public class AnnotationController {
      * @throws IOException
      */
     public TreeMap<String, TextAnnotation> loadFolder(String folder, String username) throws Exception {
-
-        // we will modify this.!
 
         String folderurl = folders.get(folder);
         String foldertype = foldertypes.get(folder);
@@ -182,6 +191,20 @@ public class AnnotationController {
         hs.setAttribute("dataname", folder);
 
         return "redirect:/annotation";
+    }
+
+    /**
+     * This is called when the user clicks on the language button on the homepage.
+     * @param folder
+     * @param hs
+     * @return
+     * @throws IOException
+     */
+    @RequestMapping(value = "/addword", method=RequestMethod.GET)
+    @ResponseStatus(value = HttpStatus.OK)
+    public void addword(@RequestParam(value="key") String key, @RequestParam(value="def") String def, HttpSession hs) throws Exception {
+        logger.info("Adding to dict: " + key + " -> " + def);
+        this.dict.add(key, def);
     }
 
     @RequestMapping(value = "/save", method=RequestMethod.GET)
@@ -279,7 +302,11 @@ public class AnnotationController {
 
         // add spans to every word that is not a constituent.
         for(int t = 0; t < text.length; t++){
-            text[t] = "<span class='token pointer' id='tok-" + t + "'>" + text[t] + "</span>";
+            String def = null;
+            if(dict.containsKey(text[t])){
+                def = dict.get(text[t]).get(0);
+            }
+            text[t] = "<span class='token pointer' def='<i>"+ def +"</i>' id='tok-" + t + "'>" + text[t] + "</span>";
         }
 
         for(Constituent c : ner.getConstituents()){
@@ -323,6 +350,7 @@ public class AnnotationController {
     }
 
     /**
+     * This is called when the label button is clicked for a word.
      * This should never get label O
      * @param label
      * @param spanid
@@ -332,14 +360,15 @@ public class AnnotationController {
      * @return
      * @throws Exception
      */
-    @RequestMapping(value="/addtoken", method=RequestMethod.POST)
+    @RequestMapping(value="/addtoken", method=RequestMethod.POST, produces = "application/text")
     @ResponseStatus(value = HttpStatus.OK)
-    public void addtoken(@RequestParam(value="label") String label, @RequestParam(value="spanid") String spanid, @RequestParam(value="id") String idstring, HttpSession hs, Model model) throws Exception {
+    @ResponseBody
+    public String addtoken(@RequestParam(value="label") String label, @RequestParam(value="spanid") String spanid, @RequestParam(value="id") String idstring, HttpSession hs, Model model) throws Exception {
 
         logger.info(String.format("TextAnnotation with id %s: change span (id:%s) to label: %s.", idstring, spanid, label));
 
         String[] ss = spanid.split("-");
-        Pair<Integer, Integer> span = new Pair<>(Integer.parseInt(ss[1]), Integer.parseInt(ss[2]));
+        IntPair span = new IntPair(Integer.parseInt(ss[1]), Integer.parseInt(ss[2]));
 
         TreeMap<String, TextAnnotation> tas = (TreeMap<String, TextAnnotation>) hs.getAttribute("tas");
 
@@ -368,6 +397,25 @@ public class AnnotationController {
             Constituent newc = new Constituent(label, ViewNames.NER_CONLL, ta, span.getFirst(), span.getSecond());
             ner.addConstituent(newc);
         }
+
+        List<IntPair> matchingspans = new ArrayList<>();
+
+        // only return spans that are not labeled, and which are not the current span.
+        // Without this, there would be an infinite loop of labeling.
+        for(IntPair sp : ta.getSpansMatching(text)){
+            if(sp == span){
+                continue;
+            }
+            List<Constituent> conscovering = ner.getConstituentsCoveringSpan(sp.getFirst(), sp.getSecond());
+            if(conscovering.size() == 0) {
+                matchingspans.add(sp);
+            }
+        }
+
+        logger.info("Matching (unlabeled) spans: " + matchingspans);
+
+
+        return matchingspans.toString().replaceAll("\\)", "]").replaceAll("\\(", "[");
 
     }
 

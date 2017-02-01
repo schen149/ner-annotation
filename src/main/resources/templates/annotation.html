@@ -15,6 +15,10 @@
           <a target="_blank" th:href="${'http://www.' + taid.replace('_','/').replace('.conll', '.html')}">Link</a>
       </div>
 
+      <div class="alerts">
+        
+      </div>
+      
       <div id="tagdescriptions">
           Labels:
               <span th:each="label : ${labels}" th:class="${label}" th:text="${label}"></span>
@@ -24,14 +28,30 @@
 
           <div class="panel panel-default">
               <div class="panel-body" >
-                  <div th:utext="${htmlstring}" id="text" />
+                <div th:utext="${htmlstring}" id="text" />
               </div>
           </div>
 
       <div class="form-group">
         <a id="savebutton" class="btn btn-default" role="button"><span class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></span> Save</a>
-        <a id="removebutton" class="btn btn-default" role="button"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span> Remove All Labels</a>
+          <a id="removebutton" class="btn btn-default" role="button"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span> Remove All Labels</a>
+          <a id="dictbutton" class="btn btn-default" role="button"><span class="glyphicon glyphicon-book" aria-hidden="true"></span> Toggle Dictionary</a>
       </div>
+
+      <div class="form-group">
+          <form class="form-inline">
+              <div class="form-group">
+                  <label for="key">Foreign</label>
+                  <input type="text" class="form-control" id="key" placeholder="Foreign word" />
+              </div>
+              <div class="form-group">
+                  <label for="def">English</label>
+                  <input type="text" class="form-control" id="def" placeholder="English word" />
+              </div>
+              <button type="button" id="defsubmit" class="btn btn-default">Submit</button>
+          </form>
+      </div>
+
 
       <div class="form-group">
           <div class="btn-group" role="group" aria-label="Next and previous">
@@ -45,6 +65,8 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+
+    var annotations = [];
 
     $(document).ready(function() {
 
@@ -71,9 +93,44 @@
         });
 
         $("#removebutton").click(function(){
+            if (confirm('Are you sure you want to remove?')) {
+                $.each($("[id^=tok]"), function(i, v){
+                    console.log(v);
+                    removelabel(v.id);
+                });
+            } else {
+
+            }
+        });
+
+        $("#dictbutton").click(function(){
             $.each($("[id^=tok]"), function(i, v){
-                console.log(v);
-                removelabel(v.id);
+
+                var def = v.getAttribute("def");
+
+                var txt = $(v).html();
+
+                if(def != "<i>null</i>") {
+                    $(v).html(def);
+                    v.setAttribute("def", txt);
+                }
+            });
+        });
+
+        $("#defsubmit").click(function(){
+
+            var def = $("#def").val();
+            var key = $("#key").val();
+
+            $.ajax({
+                method: "GET",
+                url: "/addword",
+                data: {key: key, def: def}
+            }).done(function (msg) {
+                console.log("successful addition");
+                $("#def").val("");
+                $("#key").val("");
+
             });
         });
 
@@ -213,6 +270,7 @@
         }
 
 
+
         // fix the spanid of constituent span.
         function fixspanid(parent){
             var kids = $(parent).children("span");
@@ -314,8 +372,42 @@
                 data: {label: newclass, spanid: newspanid, id: getParameterByName("taid")}
             }).done(function (msg) {
                 console.log("successful label add.");
+
+                console.log(msg);
+                var spans = JSON.parse(msg);
+                console.log(spans);
+                console.log("Found " + spans.length + " spans. Replace all with label: " + newclass + "?");
+
+                $.each(spans, function(i, d){
+                    var spanid = "tok-" + d[0];
+                    addlabel(spanid, newclass);
+                })
+
+
             });
+
+            var text = gettext(newspanid);
+
+            // search doc for more instances of this text.
+
+
+
+            annotations.push(text);
+
         };
+
+        // always assume that this spanid has class cons.
+        function gettext(spanid){
+            var t = "";
+            $("#" + spanid).children().each(function(i, d){
+                t += $(d).text() + " ";
+            });
+
+            return t.trim();
+
+        }
+
+
 
         function save(){
             var taid = getParameterByName("taid");

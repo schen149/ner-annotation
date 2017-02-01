@@ -1,6 +1,6 @@
 # Specify names and locations of datasets
 #English   data/eng-tas/	ta
-#EnglishConll   data/eng-conll/	conll
+EnglishConll   data/eng-conll/	conll
 #NI-ULY    /shared/corpora/ner/eval/ta/NI2-uly/	ta
 #NI-arabic	/shared/corpora/ner/eval/ta/NI2-new/	ta
 #NI-arabic-ULY	/shared/corpora/ner/eval/ta/NI2-uly-new/	ta
@@ -18,3 +18,6 @@
 Bengali        /shared/corpora/ner/human/bn/conll-anno.urom/ conll
 Tamil        /shared/corpora/ner/human/ta/conll-anno.urom/ conll
 BengaliOrig        /shared/corpora/ner/human/bn/conll conll
+ThaiVOA        /shared/corpora/ner/human/th/conll-anno.urom conll
+ThaiLORELEI       /shared/corpora/ner/human/th/lorelei-conll-anno-short.urom conll
+ThaiGold       /shared/corpora/ner/human/th/lorelei-conll.urom conll
