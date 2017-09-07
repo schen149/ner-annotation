@@ -8,6 +8,24 @@
     border-radius: 5px;
 }
 
+.suggestion {
+    border-bottom: 1px dashed gray;
+}
+
+.tooltip-inner {
+    max-width: 200px;
+    padding: 3px 8px;
+    color: black;
+    text-align: center;
+    background-color: white;
+    border-radius: 4px;
+    border: 1px solid lightgray;
+}
+
+.suffix {
+    color: lightgray;
+}
+
 #legendcontainer {
     padding: 7px;
 }
@@ -38,4 +56,37 @@
 #tagdescriptions span {
     padding: 2px;
     border-radius: 2px;
+}
+
+.def {
+    font-style: italic;
+}
+
+/*** Works on common browsers ***/
+::selection {
+    background-color: lightgray;
+    /*color: red;*/
+}
+
+/*** Mozilla based browsers ***/
+::-moz-selection {
+    background-color: #352e7e;
+    color: #fff;
+}
+
+/***For Other Browsers ***/
+::-o-selection {
+    background-color: #352e7e;
+    color: #fff;
+}
+
+::-ms-selection {
+    background-color: #352e7e;
+    color: #fff;
+}
+
+/*** For Webkit ***/
+::-webkit-selection {
+    background-color: #352e7e;
+    color: #fff;
 }
