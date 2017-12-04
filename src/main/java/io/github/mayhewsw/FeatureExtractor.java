@@ -23,6 +23,11 @@ public class FeatureExtractor {
      */
     public static void extract(TextAnnotation ta){
 
+        if (!ta.hasView(ViewNames.NER_CONLL)) {
+            SpanLabelView emptyView = new SpanLabelView(ViewNames.NER_CONLL, ta);
+            ta.addView(ViewNames.NER_CONLL, emptyView);
+        }
+
         View ner = ta.getView(ViewNames.NER_CONLL);
 
 
