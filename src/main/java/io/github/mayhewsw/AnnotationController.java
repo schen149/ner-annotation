@@ -3,6 +3,7 @@ import edu.illinois.cs.cogcomp.core.datastructures.IntPair;
 import edu.illinois.cs.cogcomp.core.datastructures.Pair;
 import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
+import edu.illinois.cs.cogcomp.core.datastructures.textannotation.SpanLabelView;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.TextAnnotation;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.View;
 import edu.illinois.cs.cogcomp.core.datastructures.trees.Tree;
@@ -139,12 +140,20 @@ public class AnnotationController {
             for (int i = 0; i < limit; i++) {
                 String file = files[i];
                 TextAnnotation ta = SerializationHelper.deserializeTextAnnotationFromFile(folderurl + "/" + file);
+                if (!ta.hasView(ViewNames.NER_CONLL)) {
+                    SpanLabelView emptyView = new SpanLabelView(ViewNames.NER_CONLL, ta);
+                    ta.addView(ViewNames.NER_CONLL, emptyView);
+                }
                 ret.put(file, ta);
             }
         }else if(foldertype.equals(FOLDERCONLL)){
             CoNLLNerReader cnl = new CoNLLNerReader(folderurl);
             while(cnl.hasNext()){
                 TextAnnotation ta = cnl.next();
+                if (!ta.hasView(ViewNames.NER_CONLL)) {
+                    SpanLabelView emptyView = new SpanLabelView(ViewNames.NER_CONLL, ta);
+                    ta.addView(ViewNames.NER_CONLL, emptyView);
+                }
                 logger.info("Loading: " + ta.getId());
                 ret.put(ta.getId(), ta);
             }
@@ -352,7 +361,7 @@ public class AnnotationController {
         sd = new SessionData(hs);
 
         // not sure there is any point to this??
-        updateallpatterns(sd);
+        //updateallpatterns(sd);
         buildmemoryindex(sd);
 
         return "redirect:/annotation";
@@ -890,7 +899,7 @@ public class AnnotationController {
         }
 
         // TODO: remove this because it is slow!!!
-        updateallpatterns(sd);
+        //updateallpatterns(sd);
 
         String out = this.getHTMLfromTA(ta, sd);
         return out;
@@ -942,7 +951,7 @@ public class AnnotationController {
         }
 
         // TODO: remove this because it is slow!!!
-        updateallpatterns(sd);
+        //updateallpatterns(sd);
 
         String out = this.getHTMLfromTA(ta, sd);
         return out;
