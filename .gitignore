@@ -24,4 +24,5 @@ log-spring.out
 hs_err_pid*
 
 # data, config
+config/
 data/
